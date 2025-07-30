@@ -1,6 +1,7 @@
 from enum import Enum
 import gymnasium as gym
 from gymnasium import spaces
+import pygame
 import numpy as np
 
 
@@ -11,25 +12,16 @@ class Actions(Enum):
     down = 3
 
 
-class GridWorldEnv(gym.Env):
+class CreateRedBall(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
     def __init__(self, render_mode=None, size=5):
         self.size = size  # The size of the square grid
         self.window_size = 512  # The size of the PyGame window
 
-        # Observations are dictionaries with the agent's and the target's location.
-        # Each location is encoded as an element of {0, ..., `size`}^2,
-        # i.e. MultiDiscrete([size, size]).
-        self.observation_space = spaces.Dict(
-            {
-                "agent": spaces.Box(0, size - 1, shape=(2,), dtype=int),
-                "target": spaces.Box(0, size - 1, shape=(2,), dtype=int),
-            }
-        )
-
-        # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
-        self.action_space = spaces.Discrete(4)
+        # Simplified observation and action spaces
+        self.observation_space = spaces.Discrete(10)  # Arbitrary discrete space
+        self.action_space = spaces.Discrete(4)  # Keep 4 actions
 
         """
         The following dictionary maps abstract actions from `self.action_space` to 
@@ -70,19 +62,13 @@ class GridWorldEnv(gym.Env):
         # We need the following line to seed self.np_random
         super().reset(seed=seed)
 
-        # Choose the agent's location uniformly at random
-        self._agent_location = self.np_random.integers(0, self.size, size=2, dtype=int)
+        # Initialize dummy positions for rendering (if needed)
+        self._agent_location = np.array([0, 0])
+        self._target_location = np.array([2, 2])
 
-        # We will sample the target's location randomly until it does not
-        # coincide with the agent's location
-        self._target_location = self._agent_location
-        while np.array_equal(self._target_location, self._agent_location):
-            self._target_location = self.np_random.integers(
-                0, self.size, size=2, dtype=int
-            )
-
-        observation = self._get_obs()
-        info = self._get_info()
+        # Return arbitrary state from observation space
+        observation = 0  # Arbitrary state from Discrete(10)
+        info = {}  # Simplified info
 
         if self.render_mode == "human":
             self._render_frame()
@@ -90,26 +76,29 @@ class GridWorldEnv(gym.Env):
         return observation, info
 
     def step(self, action):
-        # Map the action (element of {0,1,2,3}) to the direction we walk in
-        direction = self._action_to_direction[action]
-        # We use `np.clip` to make sure we don't leave the grid
-        self._agent_location = np.clip(
-            self._agent_location + direction, 0, self.size - 1
-        )
-        # An episode is done iff the agent has reached the target
-        terminated = np.array_equal(self._agent_location, self._target_location)
-        reward = 1 if terminated else 0  # Binary sparse rewards
-        observation = self._get_obs()
-        info = self._get_info()
+        # Update dummy positions slightly for visual feedback (optional)
+        if hasattr(self, '_agent_location'):
+            # Simple movement for visual purposes only
+            direction = self._action_to_direction.get(action, np.array([0, 0]))
+            self._agent_location = np.clip(
+                self._agent_location + direction, 0, self.size - 1
+            )
+
+        # Return arbitrary values
+        observation = 1  # Arbitrary state from Discrete(10)
+        reward = 0.5  # Arbitrary reward
+        terminated = False  # Arbitrary termination
+        truncated = False  # Arbitrary truncation
+        info = {}  # Arbitrary info
 
         if self.render_mode == "human":
             self._render_frame()
 
-        return observation, reward, terminated, False, info
+        return observation, reward, terminated, truncated, info
 
     def render(self):
-        if self.render_mode == "rgb_array":
-            return self._render_frame()
+        # Render method does nothing
+        pass
 
     def _render_frame(self):
         if self.window is None and self.render_mode == "human":
